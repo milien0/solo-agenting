@@ -9,3 +9,15 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Dependencies, runtime state, credentials, generated output
+node_modules/
+.eve/
+.output/
+.vercel/
+data/
+workspace/
+dist/
+coverage/
+*.sqlite*
+*.pid

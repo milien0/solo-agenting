@@ -1,0 +1,14 @@
+import { loadEnvironment,loadLocalCredentials,getConfig } from '../src/config.js';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { Runtime,connectorDefinitions } from '../src/runtime.js';
+loadEnvironment();loadLocalCredentials();const config=getConfig();
+const runtime=new Runtime(config);
+console.log(`Solo Agentic diagnostic — Node ${process.version}`);
+console.log(`Runtime files: ${existsSync(join(config.root,'agent/instructions.md'))?'ready':'missing'}`);
+console.log(`Model: ${config.modelProvider==='chatgpt'?'local ChatGPT (run codex login status to verify session)':process.env.AI_GATEWAY_API_KEY?'Gateway key configured':'Gateway key missing'}`);
+console.log(`Tools: ${runtime.capabilities.length}; ${runtime.tools().filter(t=>t.available).length} configuration-ready`);
+for(const connector of connectorDefinitions)console.log(`${connector.name}: ${connector.requiredEnv.every(e=>process.env[e])?'configured':'missing '+connector.requiredEnv.filter(e=>!process.env[e]).join(', ')}`);
+console.log(`Challenge: ${runtime.challenge().status}; target $${config.targetUsd} eligible gross receipts; planned capital $${config.initialCapitalUsd}`);
+console.log('No credential values are printed. Configuration-ready does not prove API permissions or account validity.');
+runtime.store.close();

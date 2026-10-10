@@ -1,0 +1,32 @@
+{
+  "name": "solo-agentic",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.13.0"
+  },
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "start": "tsx src/server.ts",
+    "agent": "eve dev",
+    "build": "eve build",
+    "check": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "tools": "tsx scripts/list-tools.ts",
+    "doctor": "tsx scripts/doctor.ts",
+    "background:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-background.ps1",
+    "background:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/stop-background.ps1"
+  },
+  "dependencies": {
+    "ai": "^7.0.137",
+    "eve": "^0.76.0",
+    "just-bash": "^3.1.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

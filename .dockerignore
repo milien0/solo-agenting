@@ -1,0 +1,9 @@
+node_modules
+.git
+.eve
+.output
+.env
+.env.*
+data
+workspace
+*.log
