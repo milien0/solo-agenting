@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { createWriteStream } from 'node:fs';
+import { createWriteStream, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { Client, type MessageStreamEvent } from 'eve/client';
 import { Runtime, roles } from './runtime.js';
@@ -38,6 +39,34 @@ export class Supervisor {
   credentialsConfigured() {
     return this.runtime.config.modelProvider==='chatgpt'||Boolean(this.runtime.env.AI_GATEWAY_API_KEY||this.runtime.env.VERCEL_OIDC_TOKEN);
   }
+  private preparationFingerprint() {
+    const names=[...new Set(this.runtime.capabilities.flatMap(tool=>tool.requiredEnv).concat(['EVE_MODEL','AI_GATEWAY_API_KEY','VERCEL_OIDC_TOKEN','SOLANA_WALLET_ADDRESS']))].sort();
+    let ownerIdeas='absent';
+    try {ownerIdeas=readFileSync(join(this.runtime.config.root,'docs','owner-ideas.md'),'utf8');}
+    catch(error) {if(!(error instanceof Error&&'code'in error&&error.code==='ENOENT'))throw error;}
+    // Persist only the digest; neither credential values nor owner content enter events.
+    return createHash('sha256').update(JSON.stringify({
+      credentials:names.map(name=>[name,this.runtime.env[name]||'']),
+      policy:{provider:this.runtime.config.modelProvider,public:this.runtime.config.enablePublicActions,financial:this.runtime.config.enableFinancialActions,modelAllowance:this.runtime.config.maxTotalModelCostUsd,sessionAllowance:this.runtime.config.maxSessionCostUsd,capital:this.runtime.config.initialCapitalUsd},
+      ledger:this.runtime.store.ledger().filter(entry=>entry.verified),ownerIdeas,
+    })).digest('hex');
+  }
+  private allowPreparation(fingerprint:string,force:boolean) {
+    const store=this.runtime.store;const key='scheduler.preparationFingerprint';
+    let previous=store.setting<string|null>(key,null);
+    if(previous===null&&!force&&this.hasCompletedPreparation()) {
+      // Adopt a completed legacy cycle when installing suppression on an existing host.
+      store.setSetting(key,fingerprint);previous=fingerprint;
+    }
+    if(!force&&previous===fingerprint) {
+      if(!store.setting('scheduler.preparationWaiting',false))store.event('preparation.waiting','Automatic preparation is waiting for changed credentials, action scopes, owner ideas or verified funding/evidence. Explicit tasks and schedules remain active.');
+      store.setSetting('scheduler.preparationWaiting',true);return false;
+    }
+    store.setSetting(key,fingerprint);store.setSetting('scheduler.preparationWaiting',false);return true;
+  }
+  private hasCompletedPreparation() {
+    return this.runtime.store.tasks(undefined,500).some(task=>task.status==='completed'&&task.title==='Advance preparation using existing capabilities'&&task.instructions.startsWith('Read challenge status, shared memory, experiment results and tool availability.'));
+  }
   startEngine() {
     if(this.stopping||this.engine||!this.runtime.config.autoEve||!this.credentialsConfigured())return;
     const {config}=this.runtime;
@@ -52,6 +81,7 @@ export class Supervisor {
     this.runtime.store.event('engine.starting',`Starting persistent eve engine (${config.modelProvider})`);
   }
   start() {
+    if(this.runtime.challenge().status==='setup'&&this.runtime.store.setting('scheduler.preparationFingerprint',null)===null&&this.hasCompletedPreparation())this.allowPreparation(this.preparationFingerprint(),false);
     for(const task of this.runtime.store.tasks('running',500)) {
       this.runtime.store.updateTask(task.id,{status:task.sessionId?'recovering':'queued',error:'Supervisor restarted; inspecting the existing durable session',leaseUntil:undefined});
     }
@@ -76,7 +106,11 @@ export class Supervisor {
       if(this.runtime.store.setting('paused',false))return;
       if(this.engineReady)await this.recover();
       const previous=this.runtime.store.setting<number>('scheduler.lastCycleMs',0);
-      const cycleDue=force||now-previous>=this.runtime.config.tickSeconds*1000;
+      const setup=this.runtime.challenge().status==='setup';
+      const fingerprint=setup?this.preparationFingerprint():null;
+      const previousFingerprint=this.runtime.store.setting<string|null>('scheduler.preparationFingerprint',null);
+      const readinessChanged=setup&&previousFingerprint!==null&&previousFingerprint!==fingerprint;
+      const cycleDue=force||readinessChanged||now-previous>=this.runtime.config.tickSeconds*1000;
       this.nextTickAt=new Date(previous+this.runtime.config.tickSeconds*1000).toISOString();
       if(cycleDue) {
         this.lastTickAt=new Date(now).toISOString();
@@ -89,7 +123,7 @@ export class Supervisor {
           }
         }
         const challenge=this.runtime.challenge();
-        if(canDispatch&&['setup','running'].includes(challenge.status)&&!this.runtime.store.tasks('queued').length&&!this.active.size&&!this.runtime.store.tasks('recovering').length) {
+        if(canDispatch&&['setup','running'].includes(challenge.status)&&!this.runtime.store.tasks('queued').length&&!this.active.size&&!this.runtime.store.tasks('recovering').length&&(challenge.status!=='setup'||this.allowPreparation(fingerprint!,force))) {
           this.runtime.store.enqueue({title:challenge.status==='setup'?'Advance preparation using existing capabilities':'Review evidence and advance the strongest earning experiment',role:'orchestrator',instructions:`Read challenge status, shared memory, experiment results and tool availability. ${challenge.status==='setup'?'The official 30-day clock has not started and accounts/funds may be missing. Continue useful preparation, research and artifact creation.':'Choose the highest-value next lawful action based on current evidence, not a predetermined strategy.'} Delegate bounded independent jobs through swarm_delegate when useful (persistent queue enforces concurrency). Avoid repeatedly creating equivalent tasks. Produce artifacts or new evidence; if blocked, save the exact dependency and move to other useful work. Record an evidence-based handoff.`});
         }
       }
@@ -164,7 +198,7 @@ export class Supervisor {
     const paused=this.runtime.store.setting('paused',false);
     const costs=this.runtime.store.modelCosts();
     const budgetBlocked=this.runtime.store.setting('model.budgetBlocked',false);
-    return {mode:paused?'paused':budgetBlocked?'model_budget_limit':this.modelReady?'active':this.modelState==='failed'?'model_error':this.engineReady?'verifying_model':this.credentialsConfigured()?'starting_engine':'waiting_for_model',paused,modelReady:this.modelReady,lastTickAt:this.lastTickAt,nextTickAt:this.nextTickAt,activeWorkers:this.active.size,maxWorkers:config.maxWorkers,uptimeSeconds:Math.floor((Date.now()-this.startedAt)/1000),modelProvider:config.modelProvider,modelCostUsd:costs.reported?costs.totalUsd:null,modelCostReporting:costs.reported?'provider_reported':config.modelProvider==='chatgpt'?'subscription_usage_not_priced':'unavailable',maxTotalModelCostUsd:config.maxTotalModelCostUsd};
+    return {mode:paused?'paused':budgetBlocked?'model_budget_limit':this.modelReady?'active':this.modelState==='failed'?'model_error':this.engineReady?'verifying_model':this.credentialsConfigured()?'starting_engine':'waiting_for_model',paused,modelReady:this.modelReady,preparationWaiting:this.runtime.challenge().status==='setup'&&this.runtime.store.setting('scheduler.preparationWaiting',false),lastTickAt:this.lastTickAt,nextTickAt:this.nextTickAt,activeWorkers:this.active.size,maxWorkers:config.maxWorkers,uptimeSeconds:Math.floor((Date.now()-this.startedAt)/1000),modelProvider:config.modelProvider,modelCostUsd:costs.reported?costs.totalUsd:null,modelCostReporting:costs.reported?'provider_reported':config.modelProvider==='chatgpt'?'subscription_usage_not_priced':'unavailable',maxTotalModelCostUsd:config.maxTotalModelCostUsd};
   }
   agents() {return roles.map(role=>({...role,status:this.runtime.store.tasks('running').some(t=>t.role===role.id)?'working':this.modelReady?'ready':'waiting'}));}
   async pause() {
