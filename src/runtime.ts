@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { Config } from './config.js';
 import { Store } from './store.js';
 import { createCapabilities } from './capabilities/index.js';
+import { provisionWallet, assertVaultOutside } from './wallet.js';
 
 export const roles = [
   {id:'orchestrator',name:'Solo',role:'Orchestrator'},
@@ -101,6 +102,15 @@ export class Runtime {
   }
   async operation(operation:string,input:any):Promise<unknown> {
     switch(operation) {
+      case 'wallet.provision': {
+        if(this.env.SOLANA_WALLET_ADDRESS)return {publicAddress:this.env.SOLANA_WALLET_ADDRESS,created:false,custody:'owner-configured address',signingAvailable:false};
+        await assertVaultOutside(this.config.vaultDir,[this.config.root,this.config.workspace]);
+        const wallet=await provisionWallet(this.config.vaultDir);
+        this.store.put('wallet',{publicAddress:wallet.publicAddress,network:'solana'},'solana');
+        this.env.SOLANA_WALLET_ADDRESS=wallet.publicAddress;
+        this.env.SOLANA_RPC_URL ||= 'https://api.mainnet-beta.solana.com';
+        return wallet;
+      }
       case 'challenge.overview': return this.challenge();
       case 'ledger.record': return this.store.ledgerRecord(input,false);
       case 'ledger.list': return this.store.ledger().slice(0,input.limit||100);

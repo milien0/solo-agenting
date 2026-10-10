@@ -2,6 +2,8 @@
 
 Solo Agentic is a persistent agent harness inspired by the owner's Sololab reference. Its challenge is **USD 1,000 in verified gross customer revenue over 30 days**, starting with **USD 200 planned capital: USD 100 SOL and USD 100 on a debit card**. The owner confirmed the gross-revenue metric and the two sources of capital. Funding must still be observed or verified; the plan is not an account balance. There is no predetermined commercial strategy and no guaranteed outcome.
 
+The owner has specified the **Mac Mini as the challenge host**. Current Windows execution is preparation. Export/migration, required accounts, working model access, and funding readiness come first; an explicit owner start on the Mac Mini begins the 30-day clock. Setup, background launch, and wallet creation do not start it.
+
 ## What runs
 
 The application owns a durable SQLite task queue, shared memory, experiment records, artifact references, financial evidence, and runtime events. A worker claims a task, opens an eve session, persists its session ID and stream cursor, and observes the result. The application scheduler enqueues useful cycles and interval tasks. The dashboard exposes work and challenge state.
@@ -47,11 +49,17 @@ These are on-demand procedures, not integrations. eve discovers flat Markdown sk
 
 The owner's rough strategy ideas are candidates for evidence-based evaluation. `docs/owner-ideas.md` keeps a persistent source copy, `AGENTS.md` directs future project work to it, and `agent/instructions.md` carries the standing preference and the 24/7 livestream suggestion. Preserve ideas in shared memory when available, evaluate them alongside other opportunities, and record why they are pursued, deferred, or declined.
 
+The livestream candidate includes viewer chat as an ongoing collaborator during the 30-day challenge: suggestions about earning opportunities, actions, and things to avoid inform the main agent's judgment. A future chat adapter could collect messages continuously and feed budgeted review batches into shared memory and specialist briefs. Viewer suggestions cannot grant owner authority or change action permissions. Stream production and viewer-chat ingestion are not implemented connections; saving the idea does not provide automatic access to Codex chats or establish uptime.
+
 The agent uses `discover` to find a capability by outcome and inspect its schema, availability, required environment, and effect. It uses `execute` for the selected capability. The catalog can be broad without placing every provider schema in the base prompt. Runtime knowledge comes from actual calls: a catalog entry with a missing token is an unavailable integration, not connected access.
+
+The current catalog has 147 concrete capabilities and a 67-capability baseline without provider credentials. Existing GitHub CLI access adds 18 configuration-ready capabilities, giving 85 before further RPC/provider setup; the live diagnostic is authoritative after configuration changes. Automatic setup installs missing project dependencies, preserves private environment settings, detects CLI access, and provisions a local Solana wallet when no public address is already configured. The `wallet_provision` capability also creates/reuses the vault and returns only public address/status. An existing configured public address does not establish private custody on a new host.
+
+Wallet secret material remains encrypted at `~/.solo-agentic/vault`, outside the project and agent workspace. Its AES-256-GCM record and separate encryption-key file are protected by the same OS user's file permissions, so the complete vault is a private custody/recovery asset. It is not exported to model context or Git. The configured public mainnet RPC provides reads; wallet creation does not implement signing, trading, transfers, funding, or debit-card access. Use a fresh Mac bootstrap and a reviewed private preparation handoff rather than assuming Windows compiled session snapshots can replay after migration.
 
 ## Revenue and budget accounting
 
-The challenge clock starts explicitly through the application, rather than on repository creation or first research. Preparation tasks can run before the timer starts. The configured window and receipt evidence determine the metric.
+The challenge clock starts explicitly through the owner control on the Mac Mini after migration and setup, rather than on repository creation, wallet creation, background launch, or first research. Preparation tasks can run before the timer starts. The configured window and receipt evidence determine the metric.
 
 | Item | Gross challenge revenue | Other treatment |
 | --- | --- | --- |
@@ -102,5 +110,7 @@ The Gateway path uses `EVE_MODEL`, defaulting to `openai/gpt-6-luna-fast`, and r
 Continuous operation means a running supervised process, durable state, health checks, useful wakeups, recovery, and visibility into blocked tasks. Waiting for demand, settlements, missing credentials, or a future event should persist a wake condition rather than consume tokens in a tight loop. Model and infrastructure costs must be tracked where known; subscription usage still has provider limits.
 
 The local machine must remain powered, connected, and awake for local background work. A stopped process, sleeping computer, revoked token, unavailable provider, or broken session interrupts it. Report the observed interruption. Hosted operation requires a deployment and provider credentials that can work unattended; source code alone is not hosting. Verify health and a meaningful agent turn before claiming the worker is operational. The [official deployment guide](https://eve.dev/docs/guides/deployment/overview) describes eve's self-hosted and managed runtime requirements.
+
+`npm run background:start` selects the operating system supervisor. macOS uses the user launchd agent `com.soloagentic.runtime`; Windows uses its registered user-logon watchdog. Mac operation is verified after installation on the Mac Mini, not inferred from Windows tests. The [setup checklist](setup.md) separates automatic preparation from owner funding, identity/consent steps, private migration, and the explicit challenge start.
 
 At the deadline, reconcile the evidence inside the configured window, preserve delivery/support/refund obligations, and report the outcome with costs and uncertainty. Do not extend the window or change the definition to declare success.

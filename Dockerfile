@@ -7,7 +7,7 @@ COPY src ./src
 COPY public ./public
 COPY scripts ./scripts
 COPY tsconfig.json ./
-RUN mkdir -p data workspace .eve && chown -R node:node /app
+RUN mkdir -p data workspace .eve /home/node/.solo-agentic/vault && chown -R node:node /app /home/node/.solo-agentic && chmod 700 /home/node/.solo-agentic/vault
 USER node
 ENV HOST=0.0.0.0 PORT=4310 MODEL_PROVIDER=gateway
 EXPOSE 4310

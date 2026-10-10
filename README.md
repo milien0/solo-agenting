@@ -2,59 +2,63 @@
 
 Solo Agentic is a persistent agent application for an open-ended challenge: **earn USD 1,000 in eligible gross customer receipts within 30 days**, with **USD 200 planned startup capital: USD 100 SOL plus USD 100 on a debit card**. It researches opportunities, builds useful artifacts, coordinates workers, and records evidence without a predetermined commercial strategy. Returns and disputed receipts adjust progress; operating costs remain separate. The target is an experiment, not a promised return.
 
+The official challenge starts **on the owner's Mac Mini after migration, account setup, and funding readiness**, followed by an explicit owner start. Work on the current Windows machine is preparation. The clock has not started and funding has not been inferred.
+
 The public repository remains [milien0/solo-agenting](https://github.com/milien0/solo-agenting).
 
 ## Included
 
-- **146 concrete capabilities**, with input schemas, effects, and explicit credential requirements. **66 are configuration-ready without provider credentials**; the current local GitHub CLI bridge makes **84 configuration-ready**. Network services can still fail or require entitlement.
+- **147 concrete capabilities**, with input schemas, effects, and explicit credential requirements. **67 are configuration-ready without provider credentials**; adding the current GitHub CLI access gives **85** before further RPC/provider configuration. Run `npm run doctor` for the live count; network services can still fail or require entitlement.
 - **Five roles**: orchestrator, researcher, builder, operator, and finance; four declared eve specialists plus root-copy delegation.
 - **10 agent skills** for research, experiments, delivery, coordination, reconciliation, and recovery.
 - A SQLite task queue with bounded workers, leases, backoff, durable eve session recovery, shared memory, experiments, artifacts, and audit events.
 - A local dashboard with polling updates, account readiness, queue state, receipts, and pause/resume controls.
-- Windows background supervision with a user-logon watchdog, plus a Docker deployment configuration.
+- Windows background supervision, macOS launchd supervision for the Mac Mini, and a Docker deployment configuration.
+- Automatic local setup and Solana wallet creation, with private material stored encrypted outside the project and only the public address returned.
 - Separate owner and internal agent API credentials, explicit action gates, and idempotency checks that bind a key to the action's input.
 
 ## Run locally
 
-Use Node.js **24.13 or newer**. For subscription mode, install Codex and sign in as the operating user. Then, in PowerShell:
+On the Mac Mini, install Node.js **24.13 or newer** and Codex. Open the project/export in a terminal and run:
 
-```powershell
-npm ci
-Copy-Item -LiteralPath .env.example -Destination .env
+```sh
+npm run setup
 codex login status
 npm run doctor
-npm start
+npm run background:start
 ```
+
+Setup installs missing project dependencies, prepares private configuration, copies the selected Codex model without copying authentication files, detects existing CLI access, and provisions the local Solana wallet when no public address is already configured. It never starts the challenge. If this Mac has no Codex login, complete `codex login`. Provider sign-in, identity checks, actual wallet/card funding, and permissions for third-party accounts remain owner steps when they require the owner's identity or consent. See the [Mac Mini setup checklist](docs/setup.md).
 
 Set `MODEL_PROVIDER=chatgpt` and an `EVE_MODEL` available to the signed-in account in your private `.env`. This installation uses **`gpt-6.1-sol`**, matching its Codex configuration; the signed-in account rejected `gpt-6-luna-fast`. A completed model turn establishes access to the chosen model. Login status or a healthy HTTP server alone does not prove model entitlement.
 
-Open the [local dashboard](http://127.0.0.1:4310). The supervisor starts the headless eve engine on loopback port 2000 and dispatches preparation tasks. The challenge clock stays in **setup** until the owner presses **Start challenge**. Starting the application does not prove wallet/card funding or start earning revenue.
+Open the [local dashboard](http://127.0.0.1:4310). The supervisor starts the headless eve engine on loopback port 2000 and dispatches preparation tasks. After migration, working model access, necessary account setup, and funding evidence are ready on the Mac Mini, press **Start challenge**. The clock stays in **setup** until that explicit action. Starting the application does not prove wallet/card funding or start earning revenue.
 
-The application loads `.env` and then `.env.local`. Keep real credentials out of Git. When an existing `.env` already contains your configuration, update it instead of replacing it with the example.
+Configuration precedence is **inherited environment > `.env.local` > `.env`**. Keep real credentials out of Git. When an existing `.env` already contains your configuration, update it instead of replacing it with the example.
 
 ## Background operation
 
-On Windows:
+The same commands select the operating system's supervisor:
 
 ```powershell
 npm run background:start
 npm run background:stop
 ```
 
-Start launches a hidden process and registers **Solo Agentic Background**, a user-logon watchdog that checks the service every 30 seconds. Stop disables that scheduled task and stops the identified application process tree while retaining state. The watchdog has been registered and observed running on the current development machine.
+On macOS, start registers launchd agent **`com.soloagentic.runtime`** for the logged-in user; stop unloads it. On Windows, start launches a hidden process and registers **Solo Agentic Background**, a user-logon watchdog that checks the service every 30 seconds; stop disables that task and stops the identified application process tree. Durable state is retained. Windows supervision has been observed running on the development machine; Mac supervision must be verified after installation on the Mac Mini.
 
-Local continuous operation requires the host to remain powered, awake, and connected. It resumes at user logon and can recover eligible durable sessions after a process restart; it cannot operate while the host sleeps or is off. Hosted operation requires a separately running host and server credentials. This repository does not imply an always-on cloud deployment.
+Local continuous operation requires the host to remain powered, awake, and connected. User-session supervision can recover eligible durable sessions after a process restart; it cannot operate while the host sleeps or is off. Hosted operation requires a separately running host and server credentials. This repository does not imply an always-on cloud deployment.
 
 ## Account setup
 
-The challenge's wallet, debit card, email, and Stripe account must be configured before they can support real operations. Planned funding is not verified money, and no revenue is fabricated while accounts are missing.
+When no address is configured, `npm run setup` creates or reuses the vault's Solana wallet and writes its public address and the public mainnet RPC URL to private configuration. Private wallet material remains in the file vault at `~/.solo-agentic/vault`, outside the repository and agent workspace. The wallet record uses authenticated encryption; its encryption key is a separate file in the same owner-protected directory, so the complete vault must remain private. Setup exposes only the public address. An already configured public address is retained and does not prove the Mac has its private custody. The wallet still needs owner funding. Debit-card access, email, Stripe, and other accounts need actual delegated configuration before operations. Planned funding is not verified money, and no revenue is fabricated while accounts are missing.
 
 | Access | Configuration and scope |
 | --- | --- |
 | Models | Local `MODEL_PROVIDER=chatgpt` with Codex-owned login, or hosted `MODEL_PROVIDER=gateway` with `AI_GATEWAY_API_KEY` |
 | GitHub | Scoped `GITHUB_TOKEN`, or optional `GITHUB_AUTH_FROM_GH=true` to reuse an existing native GitHub CLI login; the runtime obtains its token in memory without printing or writing it |
 | Search | `BRAVE_SEARCH_API_KEY` for Brave; public research utilities also exist |
-| Solana | `SOLANA_RPC_URL`, plus the wallet's public address; finalized read queries only |
+| Solana | Setup fills `SOLANA_RPC_URL` and `SOLANA_WALLET_ADDRESS`; finalized reads only, with wallet signing/trading still absent |
 | Stripe | `STRIPE_SECRET_KEY`; catalog writes also need `STRIPE_CATALOG_WRITE_ENABLED=true` |
 | Gmail | Scoped `GMAIL_ACCESS_TOKEN`; drafts/sends have separate enable flags |
 | X | `X_BEARER_TOKEN` for reads; user-context token and `X_POST_ENABLED=true` for posting |
@@ -85,6 +89,7 @@ npm run tools
 Tests cover capability boundaries, provider requests, bookkeeping, authorization, and durable task behavior. eve discovery checks the actual instructions, tools, skills, and subagents. These checks do not replace a real provider-entitlement check or live customer evidence.
 
 - [Operating model and accounting](docs/operating-model.md)
+- [Mac Mini setup and owner steps](docs/setup.md)
 - [Capability catalog and account requirements](docs/tool-library.md)
 - [Background operation and Docker deployment](docs/deployment.md)
 - [Contributor instructions](AGENTS.md)

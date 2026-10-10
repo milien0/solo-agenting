@@ -151,9 +151,9 @@ function renderChallenge() {
     setText('clock-caption', challenge.endsAt ? `Ends ${date(challenge.endsAt)}` : `Started ${date(challenge.startedAt)}`);
     $('start-challenge-button').replaceChildren(document.createTextNode('Challenge clock started'));
   } else {
-    setText('challenge-status', 'Preparation phase');
+    setText('challenge-status', 'Mac mini preflight');
     setText('days-value', String(challenge.durationDays || 30));
-    setText('days-label', 'days, once started');
+    setText('days-label', 'days after preflight');
     setText('clock-caption', 'The clock has not started');
     $('start-challenge-button').replaceChildren(element('span', '', '↗'), document.createTextNode('Start challenge'));
   }

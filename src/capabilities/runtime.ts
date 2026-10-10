@@ -7,6 +7,7 @@ export function runtimeCapabilities(c: CapabilityContext) {
   const task = obj({ title: short, description: text.optional(), role: short.optional(), priority: z.number().int().min(0).max(100).default(50) });
   return [
     add('challenge_overview', 'Read challenge goal, deadline, verified revenue and capital.', 'read', empty, 'challenge.overview'),
+    add('wallet_provision', 'Create or read the agent-owned Solana wallet and return only its public address and private-vault status; never return secrets, sign transactions or move funds.', 'write', empty, 'wallet.provision'),
     add('ledger_record', 'Record unverified financial evidence with an optional occurrence time or linked receipt; provider or owner reconciliation must verify it before it counts.', 'financial', obj({ type: z.enum(['income', 'expense', 'funding', 'refund']), amountUsd: z.number().finite().positive(), description: short, externalRef: short, relatedRef: short.optional(), occurredAt: z.string().datetime({ offset: true }).optional() }), 'ledger.record'),
     add('ledger_list', 'Read financial ledger entries and verification status.', 'read', obj({ limit }), 'ledger.list'),
     add('memory_save', 'Save durable research or operational memory.', 'write', obj({ key: short, content: text, tags: z.array(short).max(30).default([]) }), 'memory.save'),

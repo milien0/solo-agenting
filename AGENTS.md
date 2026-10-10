@@ -2,12 +2,15 @@
 
 This repository implements **Solo Agentic**, a persistent earning-challenge harness. The public GitHub repository name remains `milien0/solo-agenting`. Preserve the owner's open strategy: the target is USD 1,000 eligible gross customer receipts over 30 days with USD 200 planned startup capital, not a prescribed product, channel, or trading strategy. No return is guaranteed.
 
+The owner requires the official challenge to start on the **Mac Mini after migration/export, required account setup, and funding readiness**. Current Windows work is preparation. Setup, wallet creation, background launch, and migration must never silently start the clock; the owner starts it explicitly on the Mac Mini when ready.
+
 ## Source and framework
 
 - Read the existing implementation and relevant documentation before editing. For eve APIs and discovery conventions, prefer the installed `node_modules/eve/docs/README.md` and the relevant exact-version guide.
 - Root authored files live in `agent/`. Declared specialists live in `agent/subagents/<role>/` and require `agent.ts` with a description. They do not inherit root authored slots; explicitly expose tools or shared helpers they need.
 - `agent/instructions.md`, `agent/skills/`, and specialist instructions define behavior. The application scheduler/queue lives in `src/`; eve dev's cron schedules do not supply the background cadence.
 - The dashboard uses polling. Do not claim SSE, WebSockets, cloud deployment, or a provider connection that the implementation has not established.
+- Background commands select Windows supervision or the macOS launchd agent `com.soloagentic.runtime`. Verify Mac operation on a Mac; a Windows check cannot establish Mac uptime.
 - Keep delegation scopes non-overlapping when multiple agents edit. Shared runtime records and artifact references, rather than conversation memory, are the cooperative state.
 
 ## Owner ideas and persistent context
@@ -29,6 +32,7 @@ Keep new owner ideas in durable shared memory when available and in `docs/owner-
 ## Credentials and boundaries
 
 - Never commit real `.env` files, tokens, OAuth material, wallet seeds/private keys, card details, customer data, logs, runtime databases, `data/`, `workspace/`, or `.eve/`. Keep examples as placeholders. Review staged content before publishing.
+- Wallet setup keeps encrypted private material outside the project at `~/.solo-agentic/vault` and exposes only the public address. Never return seed/private-key material to model context, artifacts, logs, or Git. Migration of an existing vault is an owner-controlled private operation, separate from a public repository export.
 - Preserve separate owner and agent/internal credentials, loopback defaults, Host/origin checks, action gates, input validation, safe workspace paths, bounded HTTP responses, and provider scope checks.
 - A listed capability or configured token does not prove provider authorization or entitlement. Inspect actual readiness and outcomes.
 - Follow applicable law, platform terms, privacy, and intellectual-property requirements. Keep identities and commercial claims honest. Do not add spam, impersonation, fake engagement, credential misuse, or unauthorized third-party access.

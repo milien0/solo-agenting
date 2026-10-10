@@ -1,8 +1,8 @@
 # Solo Agentic tool library
 
-The library contains **146 named capabilities**. Each has a validated Zod input schema, a declared effect, explicit credential requirements, and a working implementation. With no provider credentials, **66 tools are configuration-ready**: local files/data/time/math, durable runtime operations, URL utilities, and public research APIs. External network/API availability and provider entitlements are checked when a tool executes; a configured token is not a guarantee of healthy service access.
+The library contains **147 named capabilities**. Each has a validated Zod input schema, a declared effect, explicit credential requirements, and a working implementation. With no provider credentials, **67 tools are configuration-ready**: local files/data/time/math, durable runtime operations, local wallet provisioning, URL utilities, and public research APIs. Existing GitHub CLI access adds 18 configuration-ready capabilities before additional RPC/provider setup. External network/API availability and provider entitlements are checked when a tool executes; a configured token is not a guarantee of healthy service access.
 
-The challenge measures **$1,000 gross revenue in 30 days**, starting from proposed **$200 capital** ($100 Solana plus $100 debit card). Funding is not revenue. The tool library does not assume either account has been funded, create financial accounts, or claim that the challenge goal can be guaranteed.
+The challenge measures **$1,000 eligible gross customer receipts in 30 days**, starting from proposed **$200 capital** ($100 Solana plus $100 debit card). Raw receipts and return/dispute adjustments remain separate; operating costs do not reduce the challenge revenue metric. Funding is not revenue. The tool library does not assume funding, create provider/payment accounts, or guarantee the goal. The official clock starts explicitly on the owner's prepared Mac Mini after migration, account setup, and funding readiness.
 
 ## Execution and configuration
 
@@ -10,10 +10,11 @@ Every `execute` call validates input and rejects missing configuration before an
 
 | Provider | Required configuration | Scope and readiness |
 | --- | --- | --- |
-| GitHub | `GITHUB_TOKEN` | Fine-grained token scoped to intended repositories; read, issues, contents and PR permissions depend on the tool. |
+| GitHub | `GITHUB_TOKEN`, or local `GITHUB_AUTH_FROM_GH=true` | Scoped account token, optionally obtained in process memory from the operating user's existing native GitHub CLI login; read, issues, contents and PR permissions depend on the tool. |
 | Brave | `BRAVE_SEARCH_API_KEY` | Existing Search subscription; metering and provider limits apply. |
 | Stripe | `STRIPE_SECRET_KEY` | Existing account; prefer restricted/test keys while setting up. Reads are enabled by credentials. Catalog/customer/draft/sales writes additionally require `STRIPE_CATALOG_WRITE_ENABLED=true`. |
-| Solana | `SOLANA_RPC_URL` | Public HTTPS RPC URL, optionally provider credentials in its configured endpoint. Wallet public address is an explicit tool input. No private key is requested or stored. |
+| Local Solana wallet | Default private vault; optional `SOLO_VAULT_DIR` outside project/workspace | `wallet_provision` creates/reuses the encrypted local vault or returns an already configured public address. It exposes only public information and does not sign, fund, trade, or submit transactions. |
+| Solana RPC reads | `SOLANA_RPC_URL` | Public HTTPS RPC URL, optionally provider credentials in its configured endpoint. Read tools take an explicit public address where needed. Their requests do not include private keys; local wallet custody is separate. |
 | Gmail | `GMAIL_ACCESS_TOKEN` | Existing OAuth token with appropriate mailbox scopes. Draft creation additionally requires `GMAIL_DRAFT_ENABLED=true`; sending additionally requires `GMAIL_SEND_ENABLED=true` and host authorization for its explicit recipient/content. Refreshing expired tokens is not implemented. |
 | X | `X_BEARER_TOKEN` for reads | Existing subscribed API access; provider metering applies. Posting requires a separate OAuth user-context `X_USER_ACCESS_TOKEN`, `X_POST_ENABLED=true` and host authorization. No account creation or login automation. |
 | Vercel | `VERCEL_TOKEN` | Existing account/project access; metadata and deployment status reads only. Optional team is explicit input. |
@@ -33,6 +34,7 @@ Workspace tools accept relative, visible paths, confine resolved paths to `conte
 | Operation | Input | Semantics |
 | --- | --- | --- |
 | `challenge.overview` | `{}` | Return goal, challenge clock, verified receipts, capital and account readiness. |
+| `wallet.provision` | `{}` | Return a configured public address or create/reuse the external private local vault and return only public address/network/status with signing unavailable. Store public wallet metadata and configure the runtime's public address/mainnet RPC when provisioning. Do not return private material, fund the wallet, verify capital, or start the challenge clock. |
 | `ledger.record` | `{type: "income"\|"expense"\|"funding"\|"refund", amountUsd: positive number, description: string, externalRef: string, relatedRef?: string, occurredAt?: ISO timestamp}` | Record **unverified** evidence, deduplicate external reference; provider/owner reconciliation must verify it before changing challenge receipts or capital. |
 | `ledger.list` | `{limit?: 1..100}` | List financial evidence with source and verification status; default 20. |
 | `memory.save` | `{key: string, content: string, tags?: string[]}` | Save durable memory; default tags `[]`. |
@@ -63,7 +65,9 @@ Stripe create operations use mandatory idempotency keys. Prices use explicit int
 
 Gmail composes plain-text MIME messages with UTF-8 encoded subjects/body, prohibits recipient/subject header injection, and sends to one explicit recipient. It does not spoof a sender, perform bulk messaging or mutate mailbox settings. Provider OAuth scope and account access still govern each operation.
 
-Solana RPC requests are finalized read queries. `solana_balance` reports lamports and SOL, with no USD price assumption. Token account reads default to the original SPL Token program; pass the Token-2022 program explicitly when relevant. RPC methods that fetch a large block or account response may hit the 1 MiB cap. There is no key custody or transaction submission.
+`wallet_provision` is a local runtime write capability. The default vault is `~/.solo-agentic/vault`, outside the repository and agent workspace; overrides must preserve that boundary. It creates an Ed25519 key pair, stores private PKCS8 material encrypted with AES-256-GCM in `solana-wallet.json`, and stores its 32-byte encryption key in `wallet-encryption.key`. Public-address metadata is authenticated and checked against the decrypted key on reuse. macOS file permissions are owner-only (directory 700, files 600). The encryption key and ciphertext share the same OS user's custody, so both files must be backed up privately and never sent to model context, prompts, logs, artifacts, or Git. Missing/corrupt/incomplete vaults are attention items and are not silently replaced. A configured public address returned without provisioning does not prove private custody on the current machine. No private-key export, wallet signing, trading, funding, or transaction submission is exposed.
+
+Solana RPC requests remain finalized read queries. `solana_balance` reports lamports and SOL, with no USD price assumption. Token account reads default to the original SPL Token program; pass the Token-2022 program explicitly when relevant. RPC methods that fetch a large block or account response may hit the 1 MiB cap. A public RPC/public address provides observation, rather than authority to move funds.
 
 Remote MCP implements a bounded Streamable HTTP initialize/initialized handshake, session headers, matching JSON-RPC response IDs, JSON or finite SSE responses, and supported negotiated versions `2025-03-26`, `2025-06-18` and `2025-11-25`. Legacy standalone SSE, long-lived streams, arbitrary stdio commands, OAuth consent/login, unsolicited server requests and remote mutating tools are outside this adapter. Read-only hints are declarations by the configured server; only connect a server the owner trusts.
 
@@ -125,6 +129,7 @@ All provider lists return one bounded page unless explicitly paginating MCP disc
 | base64_encode | data | read | None | Encode UTF-8 text as base64. |
 | base64_decode | data | read | None | Decode base64 text as UTF-8. |
 | challenge_overview | runtime | read | None | Read challenge goal, deadline, verified revenue and capital. |
+| wallet_provision | runtime | write | None | Create or read the agent-owned Solana wallet and return only its public address and private-vault status; never return secrets, sign transactions or move funds. |
 | ledger_record | runtime | financial | None | Record unverified financial evidence with an optional occurrence time or linked receipt; provider or owner reconciliation must verify it before it counts. |
 | ledger_list | runtime | read | None | Read financial ledger entries and verification status. |
 | memory_save | runtime | write | None | Save durable research or operational memory. |

@@ -15,8 +15,9 @@
     "test": "tsx --test tests/*.test.ts",
     "tools": "tsx scripts/list-tools.ts",
     "doctor": "tsx scripts/doctor.ts",
-    "background:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-background.ps1",
-    "background:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/stop-background.ps1"
+    "setup": "node scripts/setup.mjs",
+    "background:start": "node scripts/background.mjs start",
+    "background:stop": "node scripts/background.mjs stop"
   },
   "dependencies": {
     "ai": "^7.0.137",

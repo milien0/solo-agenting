@@ -14,7 +14,9 @@ services:
       - solo-data:/app/data
       - solo-workspace:/app/workspace
       - solo-eve:/app/.eve
+      - solo-vault:/home/node/.solo-agentic
 volumes:
   solo-data:
   solo-workspace:
   solo-eve:
+  solo-vault:

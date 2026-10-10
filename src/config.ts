@@ -1,9 +1,11 @@
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { homedir } from 'node:os';
 
 export function loadEnvironment(root = process.cwd()) {
-  for (const name of ['.env', '.env.local']) {
+  // Node preserves existing values: process environment > .env.local > .env.
+  for (const name of ['.env.local', '.env']) {
     const path = resolve(root, name);
     if (existsSync(path)) process.loadEnvFile(path);
   }
@@ -32,6 +34,7 @@ export function getConfig(root = process.cwd()) {
     evePort: numberEnv('EVE_PORT', 2000, 1024, 65535),
     dataDir: resolve(root, process.env.DATA_DIR || 'data'),
     workspace: resolve(root, process.env.WORKSPACE_DIR || 'workspace'),
+    vaultDir: resolve(process.env.SOLO_VAULT_DIR || resolve(homedir(),'.solo-agentic','vault')),
     modelProvider: process.env.MODEL_PROVIDER || 'gateway',
     tickSeconds: numberEnv('TICK_SECONDS', 900, 15, 86400),
     maxWorkers: numberEnv('MAX_WORKERS', 3, 1, 8),
